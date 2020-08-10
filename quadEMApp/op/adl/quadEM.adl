@@ -2528,6 +2528,23 @@ composite {
 		chan="$(P)$(R)Model"
 	}
 }
+
+composite {
+        object {
+                x=10
+                y=460
+                width=390
+                height=269
+        }
+        "composite name"=""
+        "composite file"="NSLS2_IC.adl"
+        "dynamic attribute" {
+                vis="calc"
+                calc="(A=11)"
+                chan="$(P)$(R)Model"
+        }
+}
+
 composite {
 	object {
 		x=30
