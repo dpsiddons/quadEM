@@ -1,0 +1,37 @@
+# Database for NSLS2I electrometer with independent channel gains
+#   Mark Rivers
+#   Jan. 26, 2017
+
+# We replace the choices for the Range
+record(mbbo,"$(P)$(R)Range$(N)") {
+    field(DESC, "Current range $(N)")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) $(N))QE_RANGE")
+    field(ZRVL,"0")
+    field(ZRST,"0.1 uA")
+    field(ONVL,"1")
+    field(ONST,"1 uA")
+    field(TWVL,"2")
+    field(TWST,"10 uA")
+    field(THVL,"3")
+    field(THST,"100 uA")
+    field(FRVL,"4")
+    field(FRST,"5000 uA")
+}
+
+
+record(mbbi,"$(P)$(R)Range$(N)_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) $(N))QE_RANGE")
+    field(ZRVL,"0")
+    field(ZRST,"0.1 uA")
+    field(ONVL,"1")
+    field(ONST,"1 uA")
+    field(TWVL,"2")
+    field(TWST,"10 uA")
+    field(THVL,"3")
+    field(THST,"100 uA")
+    field(FRVL,"4")
+    field(FRST,"5000 uA")
+    field(SCAN, "I/O Intr")
+}

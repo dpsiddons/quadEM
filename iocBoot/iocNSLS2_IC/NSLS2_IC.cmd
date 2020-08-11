@@ -9,9 +9,9 @@ epicsEnvSet("MODULE_ID", "0")
 
 drvNSLS2_ICConfigure("$(PORT)", $(MODULE_ID), $(RING_SIZE))
 
-asynSetTraceIOMask("$(PORT)", 0, 2)
+#asynSetTraceIOMask("$(PORT)", 0, 2)
 # Uncomment this line to enable asynPrint statements with ASYN_TRACEIO_DRIVER
-asynSetTraceMask("$(PORT)", 0, 9)
+#asynSetTraceMask("$(PORT)", 0, 9)
 
 dbLoadRecords("$(QUADEM)/db/$(TEMPLATE).template", "P=$(PREFIX), R=$(RECORD), PORT=$(PORT), ADDR=0, TIMEOUT=1")
 dbLoadTemplate("DACs.substitutions")
@@ -25,3 +25,4 @@ iocInit()
 
 # save settings every thirty seconds
 create_monitor_set("auto_settings.req",30,"P=$(PREFIX), R=$(RECORD)")
+dbl > pvlist.txt

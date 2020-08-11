@@ -15,6 +15,7 @@ DBD += drvAHxxx.dbd
 DBD += drvTetrAMM.dbd
 DBD += drvNSLS_EM.dbd
 DBD += drvNSLS2_EM.dbd
+DBD += drvNSLS2I_EM.dbd
 DBD += drvNSLS2_IC.dbd
 DBD += quadEMTestApp.dbd
 DBD += quadEMTestAppVx.dbd
@@ -27,6 +28,7 @@ quadEM_SRCS         += drvAHxxx.cpp
 quadEM_SRCS         += drvTetrAMM.cpp
 quadEM_SRCS         += drvNSLS_EM.cpp
 quadEM_SRCS         += drvNSLS2_EM.cpp
+quadEM_SRCS         += drvNSLS2I_EM.cpp
 quadEM_SRCS         += drvNSLS2_IC.cpp
 quadEM_SRCS_vxWorks += drvAPS_EM.cpp
 
@@ -38,6 +40,12 @@ drvNSLS2_EM_CXXFLAGS_WIN32   += -DSIMULATION_MODE -DPOLLING_MODE
 drvNSLS2_EM_CXXFLAGS_vxWorks += -DSIMULATION_MODE -DPOLLING_MODE
 # If not building for the embedded system on Linux then uncomment the following line to also use simulation mode
 drvNSLS2_EM_CXXFLAGS_Linux  += -DSIMULATION_MODE -DPOLLING_MODE
+
+# Can only build drvNSLS2I_EM for Windows and vxWorks in simulation mode
+drvNSLS2I_EM_CXXFLAGS_WIN32   += -DSIMULATION_MODE -DPOLLING_MODE
+drvNSLS2I_EM_CXXFLAGS_vxWorks += -DSIMULATION_MODE -DPOLLING_MODE
+# If not building for the embedded system on Linux then uncomment the following line to also use simulation mode
+drvNSLS2I_EM_CXXFLAGS_Linux  += -DSIMULATION_MODE -DPOLLING_MODE
 
 # Can only build drvNSLS2_IC for Windows and vxWorks in simulation mode
 drvNSLS2_IC_CXXFLAGS_WIN32   += -DSIMULATION_MODE
@@ -73,6 +81,7 @@ $(PROD_NAME)_DBD += drvAHxxx.dbd
 $(PROD_NAME)_DBD += drvTetrAMM.dbd
 $(PROD_NAME)_DBD += drvNSLS_EM.dbd
 $(PROD_NAME)_DBD += drvNSLS2_EM.dbd
+$(PROD_NAME)_DBD += drvNSLS2I_EM.dbd
 $(PROD_NAME)_DBD += drvNSLS2_IC.dbd
 
 PROD_NAME = quadEMTestApp
