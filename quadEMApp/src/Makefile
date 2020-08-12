@@ -51,7 +51,7 @@ drvNSLS2I_EM_CXXFLAGS_Linux  += -DSIMULATION_MODE -DPOLLING_MODE
 drvNSLS2_IC_CXXFLAGS_WIN32   += -DSIMULATION_MODE
 drvNSLS2_IC_CXXFLAGS_vxWorks += -DSIMULATION_MODE
 # If not building for the embedded system on Linux then uncomment the following line to also use simulation mode
-drvNSLS2_IC_CXXFLAGS_Linux  += -DSIMULATION_MODE
+#drvNSLS2_IC_CXXFLAGS_Linux  += -DSIMULATION_MODE
 
 # The following builds a test application
 #==================================
