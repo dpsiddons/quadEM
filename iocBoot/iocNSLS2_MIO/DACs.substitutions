@@ -1,0 +1,9 @@
+file "$(QUADEM)/db/NSLS2_DAC.template"
+{
+pattern
+{P,               R,     N, PORT,     EGUL,   DRVL,  LOPR,  EGUF,  DRVH,   HOPR, PREC,  LINR}
+{quadEMTest:, NSLS2_MIO:, 0, NSLS2_MIO,  -10,   -10,   -10,    10,   10.,    10.,  4,     LINEAR}
+{quadEMTest:, NSLS2_MIO:, 1, NSLS2_MIO,  -10,   -10,   -10,    10,   10.,    10.,  4,     LINEAR}
+{quadEMTest:, NSLS2_MIO:, 2, NSLS2_MIO,  -10,   -10,   -10,    10,   10.,    10.,  4,     LINEAR}
+{quadEMTest:, NSLS2_MIO:, 3, NSLS2_MIO,  -10,   -10,   -10,    10,   10.,    10.,  4,     LINEAR}
+}

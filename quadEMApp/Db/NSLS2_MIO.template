@@ -1,0 +1,162 @@
+# Database for NSLS2 electrometer
+#   Mark Rivers
+#   Jan. 26, 2017
+
+include "quadEM.template"
+
+# Set Bias range
+record(ao,"$(P)$(R)BiasVoltage") {
+    field(DRVL, "-10")
+    field(DRVH, "10")
+}
+
+# New records for NSLS2_EM
+record(bo,"$(P)$(R)CalibrationMode") {
+    field(DESC, "Calibration Mode")
+    field(PINI, "YES")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 0)QE_CALIBRATION_MODE")
+}
+
+record(bi,"$(P)$(R)CalibrationMode_RBV") {
+    field(DESC, "Calibration Mode")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 0)QE_CALIBRATION_MODE")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout,"$(P)$(R)ADCOffset1") {
+    field(DESC, "ADC Offset channel 1")
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 0)QE_ADC_OFFSET")
+}
+
+record(longout,"$(P)$(R)ADCOffset2") {
+    field(DESC, "ADC Offset channel 2")
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 1)QE_ADC_OFFSET")
+}
+
+record(longout,"$(P)$(R)ADCOffset3") {
+    field(DESC, "ADC Offset channel 3")
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 2)QE_ADC_OFFSET")
+}
+
+record(longout,"$(P)$(R)ADCOffset4") {
+    field(DESC, "ADC Offset channel 4")
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 3)QE_ADC_OFFSET")
+}
+
+
+record(transform, "$(P)$(R)CopyADCOffsets") {
+    field(INPA, "$(P)$(R)Current1:MeanValue_RBV NPP")
+    field(CLCB, "A")
+    field(OUTB, "$(P)$(R)ADCOffset1 PP")
+    field(INPC, "$(P)$(R)Current2:MeanValue_RBV NPP")
+    field(CLCD, "C")
+    field(OUTD, "$(P)$(R)ADCOffset2 PP")
+    field(INPE, "$(P)$(R)Current3:MeanValue_RBV NPP")
+    field(CLCF, "E")
+    field(OUTF, "$(P)$(R)ADCOffset3 PP")
+    field(INPG, "$(P)$(R)Current4:MeanValue_RBV NPP")
+    field(CLCH, "G")
+    field(OUTH, "$(P)$(R)ADCOffset4 PP")
+}
+
+record(bo,"$(P)$(R)OutBit0") {
+    field(DESC, "Output bit 0")
+    field(PINI, "YES")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 0)QE_DIGITAL_OUT")
+}
+
+record(bo,"$(P)$(R)OutBit1") {
+    field(DESC, "Output bit 1")
+    field(PINI, "YES")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 1)QE_DIGITAL_OUT")
+}
+
+record(bo,"$(P)$(R)OutBit2") {
+    field(DESC, "Output bit 2")
+    field(PINI, "YES")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 2)QE_DIGITAL_OUT")
+}
+
+record(bo,"$(P)$(R)OutBit3") {
+    field(DESC, "Output bit 3")
+    field(PINI, "YES")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) 3)QE_DIGITAL_OUT")
+}
+
+record(bi,"$(P)$(R)InBit0") {
+    field(DESC, "Input bit 0")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 0)QE_DIGITAL_IN")
+}
+
+record(bi,"$(P)$(R)InBit1") {
+    field(DESC, "Input bit 1")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 1)QE_DIGITAL_IN")
+}
+
+record(bi,"$(P)$(R)InBit2") {
+    field(DESC, "Input bit 2")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 2)QE_DIGITAL_IN")
+}
+
+record(bi,"$(P)$(R)InBit3") {
+    field(DESC, "Input bit 3")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) 3)QE_DIGITAL_IN")
+}
+
+record(ai,"$(P)$(R)Vin0") {
+    field(DESC, "Voltage Input 0")
+    field(INP,  "@asyn($(PORT) 0)QE_VOLTAGE_IN")
+}
+
+record(ai,"$(P)$(R)Vin1") {
+    field(DESC, "Voltage Input 1")
+    field(INP,  "@asyn($(PORT) 1)QE_VOLTAGE_IN")
+}
+
+record(ai,"$(P)$(R)Vin2") {
+    field(DESC, "Voltage Input 2")
+    field(INP,  "@asyn($(PORT) 2)QE_VOLTAGE_IN")
+}
+
+record(ai,"$(P)$(R)Vin3") {
+    field(DESC, "Voltage Input 3")
+    field(INP,  "@asyn($(PORT) 3)QE_VOLTAGE_IN")
+}

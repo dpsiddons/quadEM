@@ -1,0 +1,69 @@
+# Database for NSLS2I electrometer with independent channel gains
+#   Mark Rivers
+#   Jan. 26, 2017
+
+# We replace the choices for the Current Range
+record(mbbo,"$(P)$(R)CurRange$(N)") {
+    field(DESC, "Current range $(N)")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) $(N))QE_CUR_RANGE")
+    field(ZRVL,"0")
+    field(ZRST,"0.1 uA")
+    field(ONVL,"1")
+    field(ONST,"1 uA")
+    field(TWVL,"2")
+    field(TWST,"10 uA")
+    field(THVL,"3")
+    field(THST,"100 uA")
+    field(FRVL,"4")
+    field(FRST,"1000 uA")
+    field(FVVL,"5")
+    field(FVST,"10000 uA")    
+}
+
+
+record(mbbi,"$(P)$(R)CurRange$(N)_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) $(N))QE_CUR_RANGE")
+    field(ZRVL,"0")
+    field(ZRST,"0.1 uA")
+    field(ONVL,"1")
+    field(ONST,"1 uA")
+    field(TWVL,"2")
+    field(TWST,"10 uA")
+    field(THVL,"3")
+    field(THST,"100 uA")
+    field(FRVL,"4")
+    field(FRST,"5000 uA")
+    field(SCAN, "I/O Intr")
+}
+
+# We replace the choices for the Voltage Range
+record(mbbo,"$(P)$(R)VoltRange$(N)") {
+    field(DESC, "Voltage range $(N)")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT) $(N))QE_VOLT_RANGE")
+    field(ZRVL,"0")
+    field(ZRST,"1.25 V")
+    field(ONVL,"1")
+    field(ONST,"2.5 V")
+    field(TWVL,"2")
+    field(TWST,"5 V")
+    field(THVL,"3")
+    field(THST,"10 V")   
+}
+
+
+record(mbbi,"$(P)$(R)VoltRange$(N)_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT) $(N))QE_VOLT_RANGE")
+    field(ZRVL,"0")
+    field(ZRST,"1.25 V")
+    field(ONVL,"1")
+    field(ONST,"2.5 V")
+    field(TWVL,"2")
+    field(TWST,"5 V")
+    field(THVL,"3")
+    field(THST,"10 V")
+    field(SCAN, "I/O Intr")
+}
