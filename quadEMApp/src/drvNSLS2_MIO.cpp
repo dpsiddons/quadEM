@@ -1,8 +1,8 @@
 // Define SIMULATION_MODE to run on a system without the FPGA
-//#define SIMULATION_MODE 1
+#define SIMULATION_MODE 1
 
 // Define POLLING_MODE to poll the ADCs rather than using interrupts
-//#define POLLING_MODE 1
+#define POLLING_MODE 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -669,10 +669,9 @@ int drvNSLS2_MIOConfigure(const char *portName, int ringBufferSize)
 /* EPICS iocsh shell commands */
 
 static const iocshArg initArg0 = { "portName", iocshArgString};
-static const iocshArg initArg1 = { "moduleID",iocshArgInt};
-static const iocshArg initArg2 = { "ring buffer size",iocshArgInt};
+static const iocshArg initArg1 = { "ring buffer size",iocshArgInt};
 static const iocshArg * const initArgs[] = {&initArg0, &initArg1};
-static const iocshFuncDef initFuncDef = {"drvNSLS2_MIOConfigure",3,initArgs};
+static const iocshFuncDef initFuncDef = {"drvNSLS2_MIOConfigure",2,initArgs};
 static void initCallFunc(const iocshArgBuf *args)
 {
     drvNSLS2_MIOConfigure(args[0].sval, args[1].ival);

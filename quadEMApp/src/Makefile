@@ -41,7 +41,7 @@ quadEM_LIBS_vxWorks += ipUnidig
 drvNSLS2_EM_CXXFLAGS_WIN32   += -DSIMULATION_MODE -DPOLLING_MODE
 drvNSLS2_EM_CXXFLAGS_vxWorks += -DSIMULATION_MODE -DPOLLING_MODE
 # If not building for the embedded system on Linux then uncomment the following line to also use simulation mode
-#drvNSLS2_EM_CXXFLAGS_Linux  += -DSIMULATION_MODE -DPOLLING_MODE
+drvNSLS2_EM_CXXFLAGS_Linux  += -DSIMULATION_MODE -DPOLLING_MODE
 
 # Can only build drvNSLS2I_EM for Windows and vxWorks in simulation mode
 drvNSLS2I_EM_CXXFLAGS_WIN32   += -DSIMULATION_MODE -DPOLLING_MODE

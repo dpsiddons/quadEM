@@ -7,7 +7,7 @@ epicsEnvSet("RING_SIZE", "10000")
 epicsEnvSet("TSPOINTS",  "1000")
 epicsEnvSet("MODULE_ID", "0")
 
-drvNSLS2_EMConfigure("$(PORT)", $(MODULE_ID), $(RING_SIZE))
+drvNSLS2_MIOConfigure("$(PORT)", $(RING_SIZE))
 
 asynSetTraceIOMask("$(PORT)", 0, 2)
 # Uncomment this line to enable asynPrint statements with ASYN_TRACEIO_DRIVER
