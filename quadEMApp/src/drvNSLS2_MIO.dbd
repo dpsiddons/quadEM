@@ -1,4 +1,4 @@
 ################
 # Register global functions
 ################
-registrar(drvNSLS2I_EMRegister)
+registrar(drvNSLS2_MIORegister)

@@ -78,7 +78,7 @@ class drvNSLS2_MIO *pdrvNSLS2_MIO;
 *
 *
 *********************************************/
-asynStatus drvNSLS2_MIO::readMeter(int *iadcbuf, int *vadcbuff)
+asynStatus drvNSLS2_MIO::readMeter(int *iadcbuf, int *vadcbuf)
 {
 
     int i, ival, vval, bval;
@@ -86,8 +86,10 @@ asynStatus drvNSLS2_MIO::readMeter(int *iadcbuf, int *vadcbuff)
 
     for (i=0;i<=3;i++) {
 #ifdef SIMULATION_MODE
-        getIntegerParam(i, P_DAC, &val);
-        ival =  ival + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5);  
+        getIntegerParam(i, P_DAC, &ival);
+	getIntegerParam(i, P_DAC, &vval);
+        ival =  ival + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5); 
+	vval =  vval + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5); 
 #else
         ival = fpgabase_[CURAVG+i];
 	vval = fpgabase_[VOLTAVG+i];
@@ -97,7 +99,7 @@ asynStatus drvNSLS2_MIO::readMeter(int *iadcbuf, int *vadcbuff)
             driverName, functionName, i, ival, vval);
         *iadcbuf++ = ival;
 	*vadcbuf++ = vval;
-	setIntegerParam(i, P_VoltageInString, vval);
+	setIntegerParam(i, P_VoltageIn, vval);
 	readBit(i, bval);
 	setIntegerParam(i, P_DigitalIn, bval);
     } 
@@ -452,11 +454,27 @@ asynStatus drvNSLS2_MIO::initDAC()
     return(asynSuccess);
 } 
 
+asynStatus drvNSLS2_MIO::setDAC(int channel, int value)
+{
+    int dacVolts;
+    static const char *functionName = "setDAC";
+    
+    printf("DAC %i; Value %i\n",channel, value); 
+    //append which of the 4 dacs to bits 18-16 (see data sheet)
+    dacVolts = (channel << 16) | (value & 0xffff); 
+    // Write the DAC voltage
+    printf("dacVolts=%0x\n",dacVolts);
+    fpgabase_[DACS] = dacVolts;
+    asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER,
+        "%s::%s channel=%d val=%d\n",
+        driverName, functionName, channel, value);
+    return(asynSuccess);
+}
 
 
 asynStatus drvNSLS2_MIO::setBiasVoltage(epicsFloat64 value)
 {
-    fpgabase_[HV_BIAS] = (int) (value *65535.0/50.0);
+    fpgabase_[HV_BIAS] = (int) (value *65535.0/10.0);
     printf("Setting bias voltage\n");
     return asynSuccess ;
 }

@@ -2,7 +2,7 @@
 #   Mark Rivers
 #   Jan. 26, 2017
 
-include "quadEM.template"
+include "quadEM_MIO.template"
 
 # Set Bias range
 record(ao,"$(P)$(R)BiasVoltage") {

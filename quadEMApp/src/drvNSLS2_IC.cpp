@@ -1,4 +1,5 @@
 // Define SIMULATION_MODE=YES in Makefile to run on a system without the FPGA
+#define SIMULATION_MODE 1
 
 #include <stdio.h>
 #include <stdlib.h>

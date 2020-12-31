@@ -10,4 +10,4 @@ quadEMTestApp_registerRecordDeviceDriver(pdbbase)
 # Note: the separator between the path entries needs to be changed to a semicolon (;) on Windows
 epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db:$(QUADEM)/db")
 
-< $(QUADEM)/iocBoot/iocNSLS2I_EM/NSLS2I_EM.cmd
+< $(QUADEM)/iocBoot/iocNSLS2_MIO/NSLS2_MIO.cmd
