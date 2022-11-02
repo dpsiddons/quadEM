@@ -31,6 +31,7 @@ public:
     /* This should be private but we call it from C so it needs to be public */
     void callbackFunc();
     bool isAcquiring();
+    volatile unsigned int *fpgabase_;  //mmap'd fpga registers
 
 protected:
     /* These are the methods we implement from quadEM */
@@ -61,7 +62,7 @@ private:
     bool calibrationMode_;
     int ADCOffset_[QE_MAX_INPUTS];
     char firmwareVersion_[MAX_FIRMWARE_LEN];
-    volatile unsigned int *fpgabase_;  //mmap'd fpga registers
+//    volatile unsigned int *fpgabase_;  //mmap'd fpga registers
     epicsFloat64 scaleFactor_[MAX_RANGES];
     int memfd_;
     int intfd_;

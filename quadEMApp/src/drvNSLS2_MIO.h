@@ -36,6 +36,9 @@ public:
     /* This should be private but we call it from C so it needs to be public */
     void callbackFunc();
     bool isAcquiring();
+//    unsigned int fpgabase_;
+//    int Peekfunc(int reg);
+//    int Pokefunc(int reg, int value);
 
 protected:
     /* These are the methods we implement from quadEM */
@@ -83,13 +86,13 @@ private:
 
     /* our functions */
     asynStatus getFirmwareVersion();
-    asynStatus readMeter(int *iadcbuf, int *vadcbuf);
-    asynStatus readBit(int channel, int value);
+    asynStatus readMeter(int *iadcbuf, int *vadcbuf, int *bbuf);
+    asynStatus readBit(int channel, int *value);
     asynStatus writeBit(int channel, int value);
     asynStatus setDAC(int channel, int value);
     asynStatus setCurRange(int channel,int value);
     asynStatus setVoltRange(int channel, int value);
-    void mmap_fpga();
+//    void mmap_fpga();
     asynStatus pl_open(int *fd);
     asynStatus setAcquireParams();
 };

@@ -31,7 +31,11 @@ record(mbbi,"$(P)$(R)Model") {
     field(TEVL, "10")
     field(TEST, "NSLS2_EM")
     field(ELVL, "11")
-    field(ELST, "NSLS2_IC")
+    field(ELST, "NSLS2I_EM")
+    field(TVVL, "12")
+    field(TVST, "NSLS2_MIO")
+    field(THTVL, "13")
+    field(THTST, "NSLS2_IC")
     field(SCAN, "I/O Intr")
 }
 
@@ -70,19 +74,32 @@ record(mbbi,"$(P)$(R)AcquireMode_RBV") {
     field(SCAN, "I/O Intr")
 }
 
-record(mbbo,"$(P)$(R)Range") {
-    field(DESC, "Range")
-    field(PINI, "YES")
-    field(DTYP, "asynInt32")
-    field(OUT,  "@asyn($(PORT) 0)QE_RANGE")
-}
+#record(mbbo,"$(P)$(R)iRange") {
+#    field(DESC, "Range")
+#    field(PINI, "YES")
+#    field(DTYP, "asynInt32")
+#    field(OUT,  "@asyn($(PORT) 0)QE_CUR_RANGE")
+#}
 
-record(mbbi,"$(P)$(R)Range_RBV") {
-    field(DESC, "Range")
-    field(DTYP,  "asynInt32")
-    field(INP,  "@asyn($(PORT) 0)QE_RANGE")
-    field(SCAN, "I/O Intr")
-}
+#record(mbbi,"$(P)$(R)iRange_RBV") {
+#    field(DESC, "Range")
+#    field(DTYP,  "asynInt32")
+#    field(INP,  "@asyn($(PORT) 0)QE_CUR_RANGE")
+#    field(SCAN, "I/O Intr")
+#}
+#record(mbbo,"$(P)$(R)vRange") {
+#    field(DESC, "Range")
+#    field(PINI, "YES")
+#    field(DTYP, "asynInt32")
+#    field(OUT,  "@asyn($(PORT) 0)QE_VOLT_RANGE")
+#}
+
+#record(mbbi,"$(P)$(R)vRange_RBV") {
+#    field(DESC, "Range")
+#    field(DTYP,  "asynInt32")
+#    field(INP,  "@asyn($(PORT) 0)QE_VOLT_RANGE")
+#    field(SCAN, "I/O Intr")
+#}
 
 record(mbbo,"$(P)$(R)PingPong") {
     field(DESC, "PingPong")

@@ -1,8 +1,8 @@
 // Define SIMULATION_MODE to run on a system without the FPGA
-#define SIMULATION_MODE 1
+//#define SIMULATION_MODE 1
 
 // Define POLLING_MODE to poll the ADCs rather than using interrupts
-#define POLLING_MODE 1
+//#define POLLING_MODE 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +29,7 @@
 
 #include <epicsExport.h>
 #include "drvNSLS2_MIO.h"
-
+#include "pl_lib.h"
 
 #define INBITS 0
 #define OUTBITS 1
@@ -37,16 +37,23 @@
 #define FPGAVER 7
 #define SA_RATE 8
 #define IRQ_ENABLE 9
-#define RAW 12
-#define RAW_A 12
-#define RAW_B 13
-#define RAW_C 14
-#define RAW_D 15
+#define ADC_CLK 11
+#define RAW_CUR 36
+#define RAW_CUR_A 36
+#define RAW_CUR_B 37
+#define RAW_CUR_C 38
+#define RAW_CUR_D 39
 #define FRAME_NO 16
 #define SA_RATE_DIV 19
 #define CURGAINREG 28
 #define VOLTGAINREG 29
-#define HV_BIAS 36
+#define GTX_RST 31
+#define HV_BIAS 32
+#define RAW_VOLT 40
+#define RAW_VOLT_A 40
+#define RAW_VOLT_B 41
+#define RAW_VOLT_C 42
+#define RAW_VOLT_D 43
 #define CURAVG 44
 #define CURAVG_A 44 
 #define CURAVG_B 45 
@@ -57,7 +64,24 @@
 #define VOLTAVG_B 49 
 #define VOLTAVG_C 50 
 #define VOLTAVG_D 51
+#define EVR_TS_S 52
+#define EVR_TS_NS 53
+#define EVR_TS_S_LAT 54
+#define EVR_TS_NS_LAT 55
+#define EVR_TRIGDELAY 56
+#define EVR_USRTRIG 57
 #define DACS 72 
+#define DACS_LDAC 73
+#define DAC_OPMODE 74
+#define THERM_DAC 76
+#define THERM_DATA 80
+#define FA_DATA 128
+#define FA_FIFOCNT 129
+#define SOFT_TRIG 130
+#define FA_TRIGLEN 131
+#define FA_PERCCOMP 132
+#define FA_DATA_RATE_SEL 133
+#define FA_CONTROL 134
 
 #define FREQ 500000.0
 
@@ -74,70 +98,40 @@ class drvNSLS2_MIO *pdrvNSLS2_MIO;
 
 
 /*******************************************
-* Read ADCs
+* Read ADCs and input bits
 *
 *
 *********************************************/
-asynStatus drvNSLS2_MIO::readMeter(int *iadcbuf, int *vadcbuf)
+asynStatus drvNSLS2_MIO::readMeter(int *iadcbuf, int *vadcbuf, int *bbuf)
 {
 
     int i, ival, vval, bval;
     static const char *functionName = "readMeter";
 
     for (i=0;i<=3;i++) {
-#ifdef SIMULATION_MODE
-        getIntegerParam(i, P_DAC, &ival);
-	getIntegerParam(i, P_DAC, &vval);
-        ival =  ival + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5); 
-	vval =  vval + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5); 
-#else
-        ival = fpgabase_[CURAVG+i];
-	vval = fpgabase_[VOLTAVG+i];
-#endif
+        ival = pl_register_read(intfd_, CURAVG+i);
+        vval = pl_register_read(intfd_, VOLTAVG+i);
+        readBit(i, &bval);
         asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, 
-            "%s::%s i=%d ival=%d vval=%d\n",
-            driverName, functionName, i, ival, vval);
+            "%s::%s i=%d ival=%d vval=%d bval=%0x\n",
+            driverName, functionName, i, ival, vval, bval);
         *iadcbuf++ = ival;
 	*vadcbuf++ = vval;
+        *bbuf++ =bval;
 	setIntegerParam(i, P_VoltageIn, vval);
-	readBit(i, bval);
 	setIntegerParam(i, P_DigitalIn, bval);
     } 
     return(asynSuccess);
 }
 
-asynStatus drvNSLS2_MIO::readBit(int channel, int value)
+asynStatus drvNSLS2_MIO::readBit(int channel, int *value)
 {
-    value=fpgabase_[INBITS];
-    value=(value >> channel) & 0x01;
+ unsigned int bits,bit; 
+   bits = (unsigned int)pl_register_read(intfd_, INBITS);
+   bit=(bits >> channel) & 0x01;
+//   printf("channel %i bit=%i\n",channel, bit);
+    *value=bit;
     return asynSuccess ;
-}
-
-/*******************************************
-* mmap fpga register space
-* returns pointer fpgabase
-*
-********************************************/
-void drvNSLS2_MIO::mmap_fpga()
-{
-
-#ifdef SIMULATION_MODE
-    fpgabase_ = (unsigned int *) calloc(256, sizeof(unsigned int));
-#else    
-    int fd;
-    fd = open("/dev/mem",O_RDWR|O_SYNC);
-    if (fd < 0) {
-        printf("Can't open /dev/mem\n");
-        exit(1);
-    }
-
-    fpgabase_ = (unsigned int *) mmap(0, 255, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
-
-    if (fpgabase_ == NULL) {
-        printf("Can't map FPGA space\n");
-        exit(1);
-    }
-#endif
 }
 
 bool drvNSLS2_MIO::isAcquiring()
@@ -217,9 +211,6 @@ drvNSLS2_MIO::drvNSLS2_MIO(const char *portName, int ringBufferSize) : drvQuadEM
     int oflags = fcntl(intfd_, F_GETFL);
     fcntl(intfd_, F_SETFL, oflags | FASYNC);
 #endif   
-    // set up register memory map
-    mmap_fpga();
-  
     // Create new parameter for DACs
     createParam(P_DACString,             asynParamInt32, &P_DAC);
     createParam(P_CalibrationModeString, asynParamInt32, &P_CalibrationMode);
@@ -230,7 +221,7 @@ drvNSLS2_MIO::drvNSLS2_MIO(const char *portName, int ringBufferSize) : drvQuadEM
     createParam(P_CurRangeString,           asynParamInt32, &P_Cur_Range);
     createParam(P_VoltRangeString,           asynParamInt32, &P_Volt_Range);
 
-    fpgabase_[SA_RATE_DIV] = (int)(50e6/FREQ + 0.5); /* set for a FREQ interrupt rate */
+    pl_register_write(intfd_, SA_RATE_DIV, (int)(50e6/FREQ + 0.5));
     fsd=(pow(2.0,17)-1.0);
     for (i=0;i<QE_MAX_INPUTS;i++){
         iscaleFactor_[i][0] = 0.1/fsd;
@@ -327,13 +318,14 @@ asynStatus drvNSLS2_MIO::writeInt32(asynUser *pasynUser, epicsInt32 value)
 asynStatus drvNSLS2_MIO::writeBit(int bit, epicsInt32 value)
 {
  int bits, result;
-    bits=fpgabase_[OUTBITS];
+    bits = pl_register_read(intfd_, OUTBITS);
     if(value==0){
-       result=(bits & (!(0x0001<<bit)));
+       result=(bits & (~(0x0001<<bit)));
        }
     if(value==1){
        result=(bits | (0x0001<<bit));
        }
+    pl_register_write(intfd_, OUTBITS, result);
     return asynSuccess ;
 }
 
@@ -356,17 +348,15 @@ void drvNSLS2_MIO::callbackFunc()
 {
     int iinput[QE_MAX_INPUTS];
     int vinput[QE_MAX_INPUTS];
+    int binput[QE_MAX_INPUTS];
     int i, irange, vrange, nvalues;
     //static const char *functionName="callbackFunc";
-
-   fpgabase_[LEDS]|=0x00000010;
-//    usleep(4);
-//    fpgabase_[LEDS]&=0xffffffef;
+   pl_register_write(intfd_, LEDS, 0x00000010);
     
     lock();
 
     /* Read the new data as integers */
-    readMeter(iinput,vinput);
+    readMeter(iinput,vinput,binput);
 
     getIntegerParam(P_Cur_Range, &irange);
     getIntegerParam(P_Volt_Range, &vrange); 
@@ -375,6 +365,7 @@ void drvNSLS2_MIO::callbackFunc()
     /* Convert to double) */
     for (i=0; i<QE_MAX_INPUTS; i++) {
         rawCurData_[i] = (double)iinput[i] * 16.0 / (double)nvalues;
+        rawVoltData_[i] = (double)vinput[i] / (double)nvalues;
         if (!calibrationMode_) {
             rawCurData_[i] = (rawCurData_[i] - ADCOffset_[i]) * iscaleFactor_[i][irange];
 	    rawVoltData_[i] = rawVoltData_[i] * vscaleFactor_[i][vrange];
@@ -383,7 +374,7 @@ void drvNSLS2_MIO::callbackFunc()
 
     computePositions(rawCurData_);
     unlock();
-    fpgabase_[LEDS]&=0xffffffef;
+    pl_register_write(intfd_, LEDS, 0xffffffef);
 }
 
 
@@ -393,7 +384,7 @@ asynStatus drvNSLS2_MIO::setAcquire(epicsInt32 value)
 {
     // 1=start acquire, 0=stop.
     acquiring_ = value;
-    fpgabase_[IRQ_ENABLE]=value;
+    pl_register_write(intfd_, IRQ_ENABLE, value);
     return asynSuccess;
 }
 
@@ -409,7 +400,7 @@ asynStatus drvNSLS2_MIO::setAcquireParams()
     getDoubleParam (P_AveragingTime,    &averagingTime);
 
     // Program valuesPerRead in the FPGA
-    fpgabase_[SA_RATE] = valuesPerRead;
+    pl_register_write(intfd_, SA_RATE, valuesPerRead);
 
 #ifdef POLLING_MODE
     sampleTime = POLL_TIME;
@@ -439,17 +430,19 @@ asynStatus drvNSLS2_MIO::setAveragingTime(epicsFloat64 value)
   */
 asynStatus drvNSLS2_MIO::setValuesPerRead(epicsInt32 value) 
 {
-    return setAcquireParams();
+   setIntegerParam(P_ValuesPerRead, value); 
+   return setAcquireParams();
 }
 
 asynStatus drvNSLS2_MIO::initDAC()
 {
 //     static const char *functionName = "initDAC";
    // First must write the Power Control Register to turn on DAC outputs
-    fpgabase_[DACS] = 0x10001F;  //see data sheet for bit def.
+    pl_register_write(intfd_, DACS, 0x10001F);
+   //see data sheet for bit def.
     epicsThreadSleep(0.001); 
     // Set Output Select Range to -10v to +10v
-    fpgabase_[DACS] = 0x0C0004;   //see data sheet for bit def.
+    pl_register_write(intfd_, DACS, 0x0C0004);
     epicsThreadSleep(0.001);
     return(asynSuccess);
 } 
@@ -464,7 +457,7 @@ asynStatus drvNSLS2_MIO::setDAC(int channel, int value)
     dacVolts = (channel << 16) | (value & 0xffff); 
     // Write the DAC voltage
     printf("dacVolts=%0x\n",dacVolts);
-    fpgabase_[DACS] = dacVolts;
+    pl_register_write(intfd_, DACS, dacVolts);
     asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER,
         "%s::%s channel=%d val=%d\n",
         driverName, functionName, channel, value);
@@ -474,8 +467,8 @@ asynStatus drvNSLS2_MIO::setDAC(int channel, int value)
 
 asynStatus drvNSLS2_MIO::setBiasVoltage(epicsFloat64 value)
 {
-    fpgabase_[HV_BIAS] = (int) (value *65535.0/10.0);
-    printf("Setting bias voltage\n");
+    pl_register_write(intfd_, HV_BIAS, (int) (value *65535.0/10.0));
+    printf("Setting bias voltage: %g\n",value);
     return asynSuccess ;
 }
 
@@ -483,7 +476,7 @@ asynStatus drvNSLS2_MIO::setCurRange(int channel, epicsInt32 value)
 {
     printf("Channel %i  Gain: %i\n",channel,value);
 
-int code;
+unsigned int code, reg;
 
     switch(value){
        case 0:
@@ -505,76 +498,97 @@ int code;
          code = 0x000820;
          break;
 	 }
-   fpgabase_[CURGAINREG] = code | (0x1 <<(24+channel));
+   reg = code | (0x1 <<(24+channel));
+   printf("reg=%i\n",reg);
+   pl_register_write(intfd_, CURGAINREG, reg);
    callParamCallbacks(channel);
    return asynSuccess;
 }
 asynStatus drvNSLS2_MIO::setVoltRange(int channel, epicsInt32 value)
 {
+int reg;
+
     printf("Channel %i  Gain: %i\n",channel,value);
 
+ reg=pl_register_read(intfd_,VOLTGAINREG);
  switch(channel){
    case 0:
     switch(value){
        case 0:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000000;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffffc) | 0x00000000));
+     /*    fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000000;*/
         break;
        case 1:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000001;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffffc) | 0x00000001));
+     /*    fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000001;*/
          break;
        case 2:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000002;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffffc) | 0x00000002));
+    /*     fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000002;*/
          break;
        case 3:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000003;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffffc) | 0x00000003));
+    /*     fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffffc)|0x00000003;*/
          break;
 	 }
     break;
   case 1:
     switch(value){
        case 0:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x0000000;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffff3) | 0x00000000));
+    /*     fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x0000000;*/
         break;
        case 1:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x0000004;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffff3) | 0x00000004));
+   /*      fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x0000004;*/
          break;
        case 2:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x0000008;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffff3) | 0x00000008));
+   /*      fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x0000008;*/
          break;
        case 3:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x000000c;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xfffffff3) | 0x0000000c));
+   /*      fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xfffffff3)|0x000000c;*/
          break;
 	 }
     break;
   case 2:	 
     switch(value){
        case 0:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000000;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffffcf) | 0x00000000));
+  /*       fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000000;*/
         break;
        case 1:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000010;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffffcf) | 0x00000010));
+  /*       fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000010;*/
          break;
        case 2:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000020;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffffcf) | 0x00000020));
+  /*       fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000020;*/
          break;
        case 3:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000030;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffffcf) | 0x00000030));
+  /*       fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffffcf)|0x00000030;*/
          break;
 	 }
     break;
   case 3:
     switch(value){
        case 0:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x00000000;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffff3f) | 0x00000000));
+ /*        fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x00000000;*/
         break;
        case 1:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x00000040;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffff3f) | 0x00000040));
+ /*        fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x00000040;*/
          break;
        case 2:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x00000080;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffff3f) | 0x00000080));
+ /*        fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x00000080;*/
          break;
        case 3:
-         fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x000000c0;
+         pl_register_write(intfd_, VOLTGAINREG, ((reg & 0xffffff3f) | 0x000000c0));
+ /*        fpgabase_[VOLTGAINREG] = (fpgabase_[VOLTGAINREG]&0xffffff3f)|0x000000c0;*/
          break;
 	 }
     break;
@@ -596,7 +610,9 @@ asynStatus drvNSLS2_MIO::getFirmwareVersion()
      for(i=0;i<256;i++){
         tmpstr[i]=0;
 	}
-     fver = fpgabase_[FPGAVER];
+     
+     fver = pl_register_read(intfd_, FPGAVER);
+  /*   fver = fpgabase_[FPGAVER]; */
      sprintf(tmpstr,"FPGA Version %i",fver);
      printf("FPGA version=%s\n",tmpstr);
      strncpy(firmwareVersion_,tmpstr, strlen(tmpstr)+1);
@@ -617,9 +633,36 @@ void drvNSLS2_MIO::report(FILE *fp, int details)
     drvQuadEM::report(fp, details);
 }
 
+/*
+int Peekfunc(int reg){
+  int value;
+  if((reg>0)&(reg<256)){
+    val = pl_register_read(intfd_, reg);
+    }
+  else{
+   printf("Bad register number: %i\n",reg);
+   value=0;
+   }
+  return(value);
+}
+
+int Pokefunc(int reg, int value){
+  if((reg>0)&(reg<256)){
+    pl_register_write(intfd_, reg, value);
+    }
+  else{
+   printf("Bad register number: %i\n",reg);
+   value=0;
+   }
+   return(Peekfunc(reg));
+}
+*/
+
+
 void drvNSLS2_MIO::exitHandler()
 {
     // Do anything that needs to be done when the EPICS is shutting down
+    fcloseall();
 }
 
 /* That's all you need to send the data to the quadEM base class.  
@@ -668,8 +711,11 @@ int drvNSLS2_MIOConfigure(const char *portName, int ringBufferSize)
 
 /* EPICS iocsh shell commands */
 
+//extern int Peekfunc(int);
+//extern int Pokefunc(int,int);
 static const iocshArg initArg0 = { "portName", iocshArgString};
-static const iocshArg initArg1 = { "ring buffer size",iocshArgInt};
+static const iocshArg initArg1 = { "moduleID",iocshArgInt};
+static const iocshArg initArg2 = { "ring buffer size",iocshArgInt};
 static const iocshArg * const initArgs[] = {&initArg0, &initArg1};
 static const iocshFuncDef initFuncDef = {"drvNSLS2_MIOConfigure",2,initArgs};
 static void initCallFunc(const iocshArgBuf *args)
@@ -684,53 +730,53 @@ void drvNSLS2_MIORegister(void)
 
 epicsExportRegistrar(drvNSLS2_MIORegister);
 
+//
+//extern unsigned int fpgabase_;
+
+//int peek(int reg){
+//	printf("Register %i = %i\n", fpgabase_[reg]);
+//	return(0);
+//	}
+
+//static const iocshArg peekArg0 = {"Register #", iocshArgInt};
+//static const iocshArg * const peekArgs[1] = {&peekArg0};
+
+//static const iocshFuncDef peekFuncDef={"peek",1,peekArgs};
+//static void peekCallFunc(const iocshArgBuf *args)
+//{
+// peek((int) args[0].ival);
+//}
+
+//void registerpeek(void){
+//        iocshRegister(&peekFuncDef,&peekCallFunc);
+//        }
+
+//epicsExportRegistrar(registerpeek);
+
+
+//int poke(int reg, int val){
+//	fpgabase_[reg]=val;
+//       peek(reg);
+//	return(0);
+//	}
+
+
+
+//static const iocshArg pokeArg0 = {"Register #", iocshArgInt};
+//static const iocshArg pokeArg1 = {"Val", iocshArgInt};
+//static const iocshArg * const pokeArgs[2] = {&pokeArg0,&pokeArg1,};
+
+
+//static const iocshFuncDef pokeFuncDef={"poke",2,pokeArgs};
+//static void pokeCallFunc(const iocshArgBuf *args)
+//{
+// poke((int) args[0].ival, (int) args[1].ival);
+//}
+
+//void registerpoke(void){
+//        iocshRegister(&pokeFuncDef,&pokeCallFunc);
+//        }
+
+//epicsExportRegistrar(registerpoke);
+
 }
-
-/*
-int peek(int reg){
-	printf("Register %i = %i\n",reg, fpgabase_[reg]);
-	return(0);
-	}
-
-static const iocshArg peekArg0 = {"Register #", iocshArgInt};
-static const iocshArg * const peekArgs[1] = {&peekArg0};
-
-static const iocshFuncDef peekFuncDef={"peek",1,peekArgs};
-static void peekCallFunc(const iocshArgBuf *args)
-{
- peek((int) args[0].ival);
-}
-
-void registerpeek(void){
-        iocshRegister(&peekFuncDef,&peekCallFunc);
-        }
-
-epicsExportRegistrar(registerpeek);
-
-
-int poke(int reg, int val){
-	fpgabase_[reg]=val;
-	peek(reg);
-	return(0);
-	}
-
-
-
-static const iocshArg pokeArg0 = {"Register #", iocshArgInt};
-static const iocshArg pokeArg1 = {"Val", iocshArgInt};
-static const iocshArg * const pokeArgs[2] = {&pokeArg0,&pokeArg1,};
-
-
-static const iocshFuncDef pokeFuncDef={"poke",2,pokeArgs};
-static void pokeCallFunc(const iocshArgBuf *args)
-{
- poke((int) args[0].ival, (int) args[1].ival);
-}
-
-void registerpoke(void){
-        iocshRegister(&pokeFuncDef,&pokeCallFunc);
-        }
-
-epicsExportRegistrar(registerpoke);
-*/
-

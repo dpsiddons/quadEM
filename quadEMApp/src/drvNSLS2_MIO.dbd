@@ -2,3 +2,5 @@
 # Register global functions
 ################
 registrar(drvNSLS2_MIORegister)
+#registrar(peek)
+#registrar(poke)

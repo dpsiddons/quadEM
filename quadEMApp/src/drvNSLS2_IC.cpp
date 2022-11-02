@@ -1,21 +1,19 @@
 // Define SIMULATION_MODE=YES in Makefile to run on a system without the FPGA
-#define SIMULATION_MODE 1
+
+// Define POLLING_MODE to poll the ADCs rather than using interrupts
+//#define POLLING_MODE 1
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#ifndef _WIN32
-  #include <unistd.h>
-  #include <sys/mman.h>
-#endif
+#include <unistd.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <math.h>
-#ifndef SIMULATION_MODE
-  #include <linux/i2c-dev.h>
-#endif
+#include <linux/i2c-dev.h>
 
 #include <epicsTypes.h>
 #include <epicsTime.h>
@@ -26,6 +24,7 @@
 #include <asynCommonSyncIO.h>
 #include <drvAsynIPPort.h>
 #include <iocsh.h>
+#include "pl_lib.h"
 
 #include <epicsExport.h>
 #include "drvNSLS2_IC.h"
@@ -45,6 +44,7 @@
 #define AVG_A 8 
 #define AVG_B 9 
 #define INTTIME 5
+#define HV 20
 
 #define FREQ 1000000.0
 #define MIN_INT_TIME 400e-6
@@ -75,12 +75,13 @@ asynStatus drvNSLS2_IC::readMeter(int *adcbuf)
     static const char *functionName = "readMeter";
 
     for (i=0;i<=1;i++) {
-#ifdef SIMULATION_MODE
-        getIntegerParam(i, P_DAC, &val);
-        val =  val + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5);  
-#else
-        val = fpgabase_[AVG+i];  
-#endif
+//#ifdef SIMULATION_MODE
+//        getIntegerParam(i, P_DAC, &val);
+//        val =  val + NOISE * ((double)rand() / (double)(RAND_MAX) -  0.5);  
+//#else
+//        val = fpgabase_[AVG+i];
+	  val = pl_register_read(intfd_, AVG+i);
+//#endif
         asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, 
             "%s::%s i=%d val=%d\n",
             driverName, functionName, i, val);
@@ -95,7 +96,7 @@ asynStatus drvNSLS2_IC::readMeter(int *adcbuf)
 /* open i2c file for DACs */
 
 asynStatus drvNSLS2_IC::OpenDacs(void){
-#ifndef SIMULATION_MODE
+/* #ifndef SIMULATION_MODE
     char filename[40], buf[10];
     int addr = 0b01001010;        // The I2C address of the DAC
     int bytesWritten;
@@ -119,82 +120,61 @@ asynStatus drvNSLS2_IC::OpenDacs(void){
        printf("Internal Reference Enabled...\n");
        }
 #endif
+*/
     return(asynSuccess);
 } 
 
 asynStatus drvNSLS2_IC::setDAC(int channel, int value)
 {
+
 #ifndef SIMULATION_MODE
     static const char *functionName = "setDAC";
-    char buf[3] = {0};
-    int bytesWritten;
-    short int dacWord; 
-
+//    char buf[3] = {0};
+//    int bytesWritten;
+    int dacWord; 
     dacWord = value;
-    if (dacWord > 4095)  dacWord = 4095; 
+    if (dacWord > 65535)  dacWord = 65535; 
     if (dacWord < 0)     dacWord = 0;
     printf("Set Voltage: %i \n",dacWord);
+//    fpgabase_[HV]=dacWord;
+    pl_register_write(intfd_, HV, dacWord);
     //printf("DAC TF: %f\n",DACTF);
     printf("DAC Word: %d   (0x%x)\n",dacWord,dacWord);
   
-    buf[0] = 0x30 + channel; //Command Access Byte
-    buf[1] = (char)((dacWord & 0x0FF0) >> 4);
-    buf[2] = (char)((dacWord & 0x000F) << 4);
-    //printf("MSB: %x    LSB: %x\n",((dacBits & 0xFF00) >> 8),(dacBits & 0x00FF));
-    printf("MSB: %x    LSB: %x\n",buf[1],buf[2]);
-    bytesWritten = write(i2c_dev_,buf,3);
-    if(bytesWritten != 3){
-      printf("Bad DAC write!\n");
-    }
+//    buf[0] = 0x30 + channel; //Command Access Byte
+//    buf[1] = (char)((dacWord & 0x0FF0) >> 4);
+//    buf[2] = (char)((dacWord & 0x000F) << 4);
+//    bytesWritten = write(i2c_dev_,buf,3);
+//    if(bytesWritten != 3){
+//      printf("Bad DAC write!\n");
+//    }
     asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER,"%s::%s channel=%d val=%d\n", driverName, functionName, channel, value);
 #endif
     return(asynSuccess);
 }
-
-
-/*******************************************
-* mmap fpga register space
-* returns pointer fpgabase
-*
-********************************************/
-void drvNSLS2_IC::mmap_fpga()
-{
-
-#ifdef SIMULATION_MODE
-    fpgabase_ = (unsigned int *) calloc(256, sizeof(unsigned int));
-#else    
-    int fd;
-    fd = open("/dev/mem",O_RDWR|O_SYNC);
-    if (fd < 0) {
-        printf("Can't open /dev/mem\n");
-        exit(1);
-    }
-
-    fpgabase_ = (unsigned int *) mmap(0, 255, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
-
-    if (fpgabase_ == NULL) {
-        printf("Can't map FPGA space\n");
-        exit(1);
-    }
-    //printf("fpgabase = %x\n",fpgabase_);
-#endif
-}
-
 
 bool drvNSLS2_IC::isAcquiring()
 {
   return acquiring_;
 }
 
-#ifdef SIMULATION_MODE
+#ifdef POLLING_MODE
 static void pollerThread(void *pPvt)
 {
+    static int trig, prevtrig;
     while(1) { /* Do forever */
-        if (pdrvNSLS2_IC->isAcquiring()) pdrvNSLS2_IC->callbackFunc();
-        epicsThreadSleep(POLL_TIME);
+    if(pdrvNSLS2_IC->isAcquiring()) {
+      trig = pdrvNSLS2_IC->fpgabase_[FRAME_NO];                                            
+       if (trig != prevtrig) {                                                  
+          prevtrig = trig;
+          pdrvNSLS2_IC->callbackFunc();
+	  }
+       }
+       epicsThreadSleep(POLL_TIME);
     }
 }
 #else
+
 /*******************************************
 * open interrupt driver 
 *
@@ -213,7 +193,7 @@ asynStatus drvNSLS2_IC::pl_open(int *fd) {
 // It calls the callbackFunc in your C++ driver.
 static void frame_done(int signum)
 {
-    pdrvNSLS2_IC->callbackFunc();
+     pdrvNSLS2_IC->callbackFunc();
 }
 #endif
 
@@ -230,7 +210,7 @@ asynStatus drvNSLS2_IC::computeScaleFactor()
     getDoubleParam(P_IntegrationTime, &integrationTime);
     /* full charge in Coulombs / time in seconds */
     scaleFactor_[range] = ranges_[range]*1e-12 / (integrationTime);
-    fullScale=scaleFactor_[range];
+    fullScale=scaleFactor_[range]*1e6; /* microamps */
     setDoubleParam(P_FullScale, fullScale);
     asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER,
         "%s::%s scaleFactor=%e\n", driverName, functionName, fullScale);
@@ -263,21 +243,21 @@ drvNSLS2_IC::drvNSLS2_IC(const char *portName, int ringBufferSize) : drvQuadEM(p
   
     // Initialize Linux driver, set callback function
     // set up register memory map
-    mmap_fpga();
-#ifdef SIMULATION_MODE
+#ifdef POLLING_MODE
+    printf("Running in POLLING mode\n");
     epicsThreadCreate("NSLS2_ICPoller",
                       epicsThreadPriorityMedium,
                       epicsThreadGetStackSize(epicsThreadStackMedium),
-                      (EPICSTHREADFUNC)pollerThread,
-                      this);
+                      (EPICSTHREADFUNC)pollerThread,this);
 #else
+    printf("Running in Interrupt mode\n");
     pl_open(&intfd_);
     signal(SIGIO, &frame_done);
     fcntl(intfd_, F_SETOWN, getpid());
     int oflags = fcntl(intfd_, F_GETFL);
     fcntl(intfd_, F_SETFL, oflags | FASYNC);
 #endif   
-  
+//    setuid(getuid()); 
     // Create new parameter for DACs
     createParam(P_DACString,             asynParamInt32,   &P_DAC);
     createParam(P_DACDoubleString,       asynParamFloat64, &P_DACDouble);
@@ -455,7 +435,8 @@ asynStatus drvNSLS2_IC::setIntegrationTime(epicsFloat64 value)
      }
     /*epicsSnprintf(outString_, sizeof(outString_), "p %d", (int)(value * 1e6));*/
     inttime=(int)(value*1.0e6);
-    fpgabase_[INTTIME] = inttime;    
+//    fpgabase_[INTTIME] = inttime; 
+    pl_register_write(intfd_, INTTIME, inttime);
     setAcquireParams();
     computeScaleFactor();
     return asynSuccess;
@@ -472,13 +453,15 @@ asynStatus drvNSLS2_IC::setAcquire(epicsInt32 value)
         // Setting this flag tells the read thread to stop
         acquiring_ = 0;
         // Stop acquisition
-        fpgabase_[IRQ_ENABLE]=0;
+//        fpgabase_[IRQ_ENABLE]=0;
+	pl_register_write(intfd_, IRQ_ENABLE, 0);
         // Call the base class function in case anything needs to be done there.
         drvQuadEM::setAcquire(0);
     } else {
         // Call the base class function because it handles some common tasks.
         drvQuadEM::setAcquire(1);
-        fpgabase_[IRQ_ENABLE]=1;
+//        fpgabase_[IRQ_ENABLE]=1;
+	pl_register_write(intfd_, IRQ_ENABLE, 1);
         acquiring_ = 1;
     }
     return asynSuccess;
@@ -498,15 +481,17 @@ asynStatus drvNSLS2_IC::setAcquireParams()
     getDoubleParam (P_AveragingTime,    &averagingTime);
     getDoubleParam (P_IntegrationTime,    &IntegrationTime);
     // Program valuesPerRead in the FPGA
-    fpgabase_[SA_RATE] = valuesPerRead;
-    fpgabase_[INTTIME] = (int)(IntegrationTime*1.0e6);
+    pl_register_write(intfd_, SA_RATE, valuesPerRead);
+//    fpgabase_[SA_RATE] = valuesPerRead;
+    pl_register_write(intfd_, INTTIME,(int)(IntegrationTime*1.0e6) );
+//    fpgabase_[INTTIME] = (int)(IntegrationTime*1.0e6);
 
-#ifdef SIMULATION_MODE
-    sampleTime = POLL_TIME;
-#else
+//#ifdef SIMULATION_MODE
+//    sampleTime = POLL_TIME;
+//#else
     // Compute the sample time.  This is valuesPerRead / FREQ. 
     sampleTime = valuesPerRead * IntegrationTime;
-#endif
+//#endif
     setDoubleParam(P_SampleTime, sampleTime);
 
     numAverage = (int)((averagingTime / sampleTime) + 0.5);
@@ -540,11 +525,11 @@ asynStatus drvNSLS2_IC::setBiasVoltage(epicsFloat64 value)
 int val, hv;
 float max;
     hv=5;
-    max=4095.0*2.048/5.0;
-    val = (int) ((value)/500.0*max);
+    max=65535.0*2.048/2.5;
+    val = (int) ((value)/1250.0*max);
     if(val >=(int)max){
         val=(int)max;
-        printf("Setting to max allowed HV, 500V\n");
+        printf("Setting to max allowed HV, 1250V\n");
         }
     printf("Setting bias voltage to %f\n",value);
     setDAC(hv,val);
@@ -554,7 +539,8 @@ float max;
 asynStatus drvNSLS2_IC::setRange(epicsInt32 value)
 {
     printf("Gain: %i\n",value);
-    fpgabase_[GAINREG] = value;
+    pl_register_write(intfd_, GAINREG, value);
+//    fpgabase_[GAINREG] = value;
     computeScaleFactor();
     return asynSuccess;
 }
@@ -570,11 +556,12 @@ asynStatus drvNSLS2_IC::getFirmwareVersion()
     int fver;
     char tmpstr[32];
 
-    printf("fpgabase=%p\n",fpgabase_);
-#ifdef SIMULATION_MODE
-    fpgabase_[FPGAVER] = 1001;
-#endif
-    fver = fpgabase_[FPGAVER];
+//    printf("fpgabase=%p\n",fpgabase_);
+//#ifdef SIMULATION_MODE
+//    fpgabase_[FPGAVER] = 1001;
+//#endif
+//    fver = fpgabase_[FPGAVER];
+    fver = pl_register_read(intfd_, FPGAVER);
     sprintf(tmpstr,"%i",fver);
     printf("FPGA version=%s\n",tmpstr);
     strcpy(firmwareVersion_,tmpstr);

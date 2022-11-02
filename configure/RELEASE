@@ -2,28 +2,26 @@
 # Run "gnumake clean uninstall install" in the application
 # top directory each time this file is changed.
 
-EPICS_BASE=/usr/local/epics/base-3.15.6
-
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 
 # If you don't want to install into $(TOP) then
 # define INSTALL_LOCATION_APP here
 #INSTALL_LOCATION_APP=<fullpathname>
 
-SUPPORT=/usr/local/epics/extensions/synApps/support
+SUPPORT=/home/peter/epics/extensions/synApps/support-master/synApps/support
 
 # This module
-QUADEM=$(SUPPORT)/quadEM
+QUADEM=$(SUPPORT)/quadEM-R9-4
 
 # For IpUnidig for APS_EM
-IPAC=$(SUPPORT)/ipac-master
+IPAC=$(SUPPORT)/ipac-2-16
 
 # IpUnidig for APS_EM
-IPUNIDIG=$(SUPPORT)/ipUnidig-master
+IPUNIDIG=$(SUPPORT)/ipUnidig-R2-12
 
 # quadEM requires areaDetector, and areaDetector/configure already defines
 # ASYN, CALC, etc.
-AREA_DETECTOR=$(SUPPORT)/areaDetector-R3-10
+AREA_DETECTOR=$(SUPPORT)/areaDetector-R3-11
 -include $(TOP)/../RELEASE.$(EPICS_HOST_ARCH).local
 -include $(AREA_DETECTOR)/configure/RELEASE_PRODS.local
 

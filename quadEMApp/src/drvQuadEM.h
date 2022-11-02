@@ -66,7 +66,6 @@ typedef enum {
     QE_ModelTetrAMM,
     QE_ModelNSLS_EM,
     QE_ModelNSLS2_EM,
-    QE_ModelNSLS2I_EM,
     QE_ModelNSLS2_MIO,
     QE_ModelNSLS2_IC
 } QEModel_t;
