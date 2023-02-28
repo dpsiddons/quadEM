@@ -1,7 +1,7 @@
 
 file {
-	name="/home/epics/support/quadEM-9-1/quadEMApp/op/adl/quadEM.adl"
-	version=030109
+	name="/home/peter/epics/extensions/synApps/support/quadEM-R9-4/quadEMApp/op/adl/quadEM.adl"
+	version=030114
 }
 display {
 	object {
@@ -913,6 +913,7 @@ text {
 		clr=54
 		bclr=3
 	}
+        format="engr. notation"
 	align="horiz. right"
 	limits {
 	}
@@ -929,7 +930,8 @@ text {
 		clr=54
 		bclr=3
 	}
-	align="horiz. right"
+	format="engr. notation"
+        align="horiz. right"
 	limits {
 	}
 }
@@ -945,7 +947,8 @@ text {
 		clr=54
 		bclr=3
 	}
-	align="horiz. right"
+	format="engr. notation"
+        align="horiz. right"
 	limits {
 	}
 }
@@ -961,6 +964,7 @@ text {
 		clr=54
 		bclr=3
 	}
+        format="engr. notation"
 	align="horiz. right"
 	limits {
 	}
@@ -2416,9 +2420,9 @@ text {
 composite {
 	object {
 		x=20
-		y=745
-		width=350
-		height=110
+		y=820
+		width=300
+		height=60
 	}
 	"composite name"=""
 	"composite file"="ADAttrFile.adl"
@@ -2488,7 +2492,7 @@ composite {
 		x=10
 		y=460
 		width=392
-		height=270
+		height=294
 	}
 	"composite name"=""
 	"composite file"="TetrAMM.adl"
@@ -2528,23 +2532,21 @@ composite {
 		chan="$(P)$(R)Model"
 	}
 }
-
 composite {
-        object {
-                x=10
-                y=460
-                width=390
-                height=269
-        }
-        "composite name"=""
-        "composite file"="NSLS2_IC.adl"
-        "dynamic attribute" {
-                vis="calc"
-                calc="(A=11)"
-                chan="$(P)$(R)Model"
-        }
+	object {
+		x=10
+		y=460
+		width=390
+		height=269
+	}
+	"composite name"=""
+	"composite file"="NSLS2_IC.adl"
+	"dynamic attribute" {
+		vis="calc"
+		calc="(A=11)"
+		chan="$(P)$(R)Model"
+	}
 }
-
 composite {
 	object {
 		x=30
